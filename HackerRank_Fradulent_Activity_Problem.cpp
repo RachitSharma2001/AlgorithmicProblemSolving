@@ -1,80 +1,131 @@
 // Link: https://www.hackerrank.com/challenges/fraudulent-activity-notifications/problem
-// So far incomplete
-
 #include <iostream>
+#include <set>
+#include <algorithm>
 using namespace std;
 
-class Node{
-  public:
-  Node* left;
-  Node* right;
-  Node* parent;
-  int value;
-  Node(int v){
-    value = v;
-    left = NULL;
-    right = NULL;
-    parent = NULL;
-  }
-};
+void remove_val(multiset<double>& m, double element){
+  multiset<double>::iterator iter = m.lower_bound(element);
 
-class BinaryTree{
-  public:
-  Node* root;
-  void removeNode(Node* curr, int value){
-    if(curr->value == value){
-      if(curr->right == NULL && curr->left == NULL){
-        curr = NULL;
-        return;
+  m.erase(iter);
+}
+
+int main(){
+  int n, d;
+  cin >> n >> d;
+
+  double* exp = new double[n];
+  double* first_half = new double[d];
+  for(int i = 0; i < n; i++){
+    cin >> exp[i];
+    if(i < d) first_half[i] = exp[i];
+  }
+
+  sort(first_half, first_half + d);
+
+  multiset<double> left_set;
+  for(int i = 0; i < d/2; i++){
+    left_set.insert(first_half[i]);
+  }
+
+  multiset<double> right_set;
+  for(int i = d/2 + (d%2); i < d; i++){
+    right_set.insert(first_half[i]);
+  }
+
+  
+  double median = 0;
+
+  if(d % 2 == 0){
+    median = (*(left_set.rbegin()) + *(right_set.begin()))/2;
+  }else{
+    median = first_half[d/2];
+  }
+  
+  //cout << left_set.size() << " " << right_set.size() << " " << median << endl;
+
+  int ans = 0;
+  for(int j = d; j < n; j++){
+    if(exp[j] >= median*2){
+      ans += 1;
+    }
+
+    if(j == n-1) break;
+
+    double removed_val = exp[j - d];
+    double added_val = exp[j];
+
+    if(d % 2 == 1){
+      if(added_val < median){
+        left_set.insert(added_val);
+      }else{
+        right_set.insert(added_val);
       }
 
-      while(true){
-        if(curr->right != NULL){
-          curr = curr->right;
-        }else if(curr->left != NULL){
-          curr = curr->left;
+      if(removed_val < median){
+        remove_val(left_set, removed_val);
+      }else if(removed_val > median){
+        remove_val(right_set, removed_val);
+      }else{
+        median = -1;
+      }
+
+      if(left_set.size() < right_set.size()){
+        double save_median = median;
+
+        median = *right_set.begin();
+
+        remove_val(right_set, *right_set.begin());
+
+        if(save_median != -1){
+          left_set.insert(save_median);
+        }
+      }else if(right_set.size() < left_set.size()){
+        double save_median = median;
+
+        median = *left_set.rbegin();
+
+        remove_val(left_set, *left_set.rbegin());
+
+        if(save_median != -1){
+          right_set.insert(save_median);
+        } 
+      }
+    }else{
+      if(removed_val < median){
+        remove_val(left_set, removed_val);
+      }else{
+        remove_val(right_set, removed_val);
+      }
+      
+      if(left_set.size() < right_set.size()){
+        if(added_val > *right_set.begin()){
+          right_set.insert(added_val);
+          int extract = *right_set.begin();
+          remove_val(right_set, extract);
+          left_set.insert(extract);
         }else{
-          break;
+          left_set.insert(added_val);
+        }
+      }else{
+        if(added_val < *left_set.rbegin()){
+          left_set.insert(added_val);
+          int extract = *left_set.rbegin();
+          remove_val(left_set, extract);
+          right_set.insert(extract);
+        }else{
+          right_set.insert(added_val);
         }
       }
-    }else{
-      if(curr->value < value){
-        removeNode(curr->right, value);
-      }else{
-        removeNode(curr->left, value);
-      }
+
+      median = (*(left_set.rbegin()) + *(right_set.begin()))/2;
     }
+    //cout << left_set.size() << " " << right_set.size() << " " << median << endl;
   }
 
-  void addNode(Node* curr, int value){
-    Node* child = findChild(curr, value);
-    
-    Node* save = child;
+  cout << ans << endl;
+}
 
-    while(child != NULL && child->value <= value){
-      child = child->parent;
-    }
-
-    if(save == child){
-      child->left = new Node(value);
-      child->left->parent = child;
-    }else{
-      int formerValue = (*child).value;
-      (*child).value = value;
-
-      (*save).value = formerValue;
-    }
-  }
-
-  Node* findChild(Node* curr, int value){
-    if(curr->left == NULL && curr->right == NULL){
-      return curr;
-    }
-
-    if(curr->value <= value){
-      return findChild(curr->left, value);
-    }else{
-      return findChild(curr->right, value);
-    }
-  }
-};
+//7 3 3 7 2 2 3 4 8
+// 8 5 8 2 11 15 7 6 5 11
+// 8 4 8 2 11 15 7 6 5 11
